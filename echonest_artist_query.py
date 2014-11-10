@@ -21,7 +21,7 @@ def connect_mongo():
 
 def insert_artist_data(artist_name, collection):
     dic = en.get('artist/similar', name=artist_name, results = 100)
-    dic['genres'] = en.get('artist/profile', name='Chance the Rapper', bucket = 'genre')['artist']['genres']
+    dic['genres'] = en.get('artist/profile', name=artist_name, bucket = 'genre')['artist']['genres']
     collection.insert(dic)
     return dic['artists']
 

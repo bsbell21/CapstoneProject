@@ -195,9 +195,9 @@ def run():
 def load_data(filename):
     pass
 
-def current_top_songs(userid, sf, value_col = 'Count'):
+def current_top_songs(userid, sf, value_col = 'Count', user_id_col='user_id'):
     ''' return a users top listened to songs '''
-    return sf[sf['user'] == userid].sort(value_col, ascending = False)
+    return sf[sf[user_id_col] == userid].sort(value_col, ascending = False)
 
 def factor_top_n(song_df, n=10, factor_col = 'factors', item_col = 'artist_song'):
     ''' 
