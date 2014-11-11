@@ -1,5 +1,6 @@
 
 import psycopg2
+import numpy as np
 
 class MSD_Queries:
     def __init__(self):
@@ -36,10 +37,11 @@ class MSD_Queries:
         OUTPUT: query results
         '''
         try:
-            if type(select_columns) != list:
+            if (type(select_columns) == str) or (type(select_columns) == np.string_):
                 select_columns = [select_columns]
-            if type(filter_values) != list:
+            if (type(filter_values) == str) or (type(filter_values) == np.string_):
                 filter_values = [filter_values]
+
 
             select_query = ''
             for column in select_columns:
@@ -51,12 +53,15 @@ class MSD_Queries:
                 filter_values_str = ''
                 for value in filter_values:
                     filter_values_str += "'%s'," % value
+
                 filter_values_str = filter_values_str[:-1]
                 where_clause = 'WHERE %s IN (%s)' % (filter_column, filter_values_str)
 
             limit_clause = ''
             if limit:
                 limit_clause = 'LIMIT %s' % str(limit)
+
+           # print 'SELECT %s FROM %s %s %s;' % (select_query, table, where_clause, limit_clause)
 
             self.c.execute(
             '''
@@ -67,10 +72,15 @@ class MSD_Queries:
             self.conn.commit()
             return self.c.fetchall()
         except Exception, e:
-            print e.pgerror
+            print e
 
 
         pass
+    def get_user_listendata(self, user_id):
+        return self.gen_query(select_columns = '*', table = 'triplets_artists', 
+            filter_column = '"user"', filter_values = user_id)
+
+
 
     def get_artist_id(self, artist_name):
         try:
@@ -89,6 +99,8 @@ class MSD_Queries:
         INPUT: list of artist ids
         OUTPUT: list of artist names
         '''
+        return self.gen_query(select_columns = '*', table = 'artist_name_ids_unique', filter_column = 'artist_id', 
+            filter_values = artist_ids)
 
         pass
 

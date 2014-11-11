@@ -7,7 +7,6 @@ def load_data():
 def create_recommender(artist_term):
     item_sim_model = gl.item_similarity_recommender.create(artist_term, 'user', 'artist_id')
     return item_sim_model
-    
 
 def run():
     artist_term = load_data()
