@@ -27,6 +27,14 @@ class MSD_Queries:
         self.conn.commit()
         return self.c.fetchall()
 
+    def get_artist_ids(self, list_artist_names):
+        ''' should improve later to do regex etc and get full data'''
+        if type(list_artist_names) != list:
+            print 'input must be a list!'
+            raise Exception
+        return self.gen_query(select_columns = '*', table = 'artist_name_ids2', filter_column = 'artist_name',
+            filter_values = list_artist_names)
+
     def gen_query(self, select_columns, table, filter_column=None, filter_values=None, limit = None):
         '''
         INPUT: 
@@ -73,6 +81,7 @@ class MSD_Queries:
             return self.c.fetchall()
         except Exception, e:
             print e
+            self.conn.reset()
 
 
         pass
@@ -92,7 +101,8 @@ class MSD_Queries:
             self.conn.commit()
             return self.c.fetchall()[0][0]
         except Exception, e:
-            print e.pgerror
+            print e
+            self.conn.reset()
 
     def get_artist_names(self, artist_ids):
         '''

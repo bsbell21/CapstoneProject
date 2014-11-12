@@ -1,5 +1,6 @@
 #from sklearn.cluster import KMeans
 import msd_sql_functions as msd
+import spotify_functions as sf
 import numpy as np
 import pandas as pd
 import requests
@@ -100,7 +101,8 @@ class GroupRecommender:
 
     def create_user_rec_sf(self, user_ids):
         '''
-        Will need to split this out once user data isn't coming from database
+        INPUT: MSD user id list
+        OUTPUT: recs for those users
         '''
 
         df = self.get_all_user_listens(user_ids)
@@ -108,18 +110,35 @@ class GroupRecommender:
         ''' may want to check to ensure that doing all at once is equivalent to getting separate recs'''
         self.recs = self.model.recommend(users = user_ids, new_observation_data = sf, k = -1, exclude_known = False)
         return self.recs
-        # cm = CheckModel()
-        # cm.load_model(self.model, self.model_cols, self.user_col, self.item_col, self.listen_col)
-        # stacked_recs = None
-        # for user_id in user_ids:
-        #     df = cm.get_user_data(user_id)
-        #     top_recs = cm.get_user_recs(df, user_id)
-        #     recs = cm.recs
-        #     if stacked_recs == None:
-        #         stacked_recs = recs
-        #     else:
-        #         stacked_recs.append(recs)
-        # return stacked_recs
+
+    def create_user_rec_spotify(self, user_ids):
+        '''
+        INPUT: spotify_user_ids
+        OUTPUT: sf of recommendations for that user
+        '''
+        s = sf.SpotifyFunctions()
+        df_pipeline_full = None
+        for user_id in user_ids:
+            df_pipeline_user = s.fit(user_id)
+            # creating appropriate column structure
+            if listen_col:
+                df_pipeline_user.columns = [self.user_col, self.item_col, self.listen_col]
+            else:
+                df_pipeline_user = df_pipeline_user[df_pipeline_user.columns[:2]]
+                df_pipeline_user.columns = [self.user_col, self.item_col]
+
+            # appending to df_pipeline_full if it exists to aggregate in one dataframe all users
+            if not df_pipeline_full:
+                df_pipeline_full = df_pipeline
+            else:
+                df_pipeline_full = pd.concat([df_pipeline_full, df_pipeline]).reset_index()
+
+        sf = gl.SFrame(df_pipeline_full)
+        ''' may want to check to ensure that doing all at once is equivalent to getting separate recs'''
+        self.recs = self.model.recommend(users = user_ids, new_observation_data = sf, k = -1, exclude_known = False)
+        return self.recs
+
+
 
     def get_all_user_listens(self, user_ids):
         '''
