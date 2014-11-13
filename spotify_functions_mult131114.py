@@ -14,7 +14,7 @@ Features to add on inbound data collection:
 1. removing duplicates for artists that have more than 1 id
 '''
 
-class SpotifyFunctions:
+class SpotifyFunctionsPublic:
     def __init__(self):
         self.token = None
         self.s = None
@@ -22,8 +22,31 @@ class SpotifyFunctions:
         self.user_id = None
         self.m = msd.MSD_Queries()
         self.artist_data_echonest = None
+        self.user_id = '1248440864' # will always use my id
+        self.token = util.prompt_for_user_token(self.user_id, 
+            scope = 'playlist-modify-public user-library-read playlist-read-private playlist-modify-private user-library-modify', client_id = '530ddf60a0e840369395009076d9fde7', 
+            client_secret = 'd1974e81df054fb2bffa895b741f96f6', redirect_uri = 'https://github.com/bsbell21')
+        self.s = sp.Spotify(auth = self.token)
 
-    def fit(self, user_id):
+    def fit(self, user_ids):
+        df_pipeline_list = []
+        for user_id in user_ids:
+            df_pipeline_user = self.fit_one(user_id)
+            # creating appropriate column structure
+            # MOVING THIS TO GroupRecommender
+            # if self.listen_col:
+            #     df_pipeline_user.columns = [self.user_col, self.item_col, self.listen_col]
+            # else:
+            #     df_pipeline_user = df_pipeline_user[df_pipeline_user.columns[:2]]
+            #     df_pipeline_user.columns = [self.user_col, self.item_col]
+
+            # appending to df_pipeline_list to aggregate
+            df_pipeline_list.append(df_pipeline_user)
+
+        df_pipeline_full = pd.concat(df_pipeline_list)#.reset_index()
+        return df_pipeline_full
+
+    def fit_one(self, user_id):
         ''' 
         something really weird happening, number of artists collected from liza dropped
         from 400 to 308 with no changes in artist selection/deletion
@@ -32,21 +55,7 @@ class SpotifyFunctions:
         Should double check that unicode items are not being removed ie /x etc
         moving on to creating full pipeline
         '''
-        self.user_id = user_id
-        self.token = util.prompt_for_user_token(user_id, scope = 'user-library-read', client_id = '530ddf60a0e840369395009076d9fde7', 
-            client_secret = 'd1974e81df054fb2bffa895b741f96f6', redirect_uri = 'https://github.com/bsbell21')
 
-        print 'token created'
-        self.s = sp.Spotify(auth = self.token)
-
-        # new code start - getting playlist authentication
-        self.token_playlist = util.prompt_for_user_token(user_id, scope = 'playlist-modify-public', client_id = '530ddf60a0e840369395009076d9fde7', 
-            client_secret = 'd1974e81df054fb2bffa895b741f96f6', redirect_uri = 'https://github.com/bsbell21')
-        self.s_playlist = sp.Spotify(auth = self.token_playlist)
-        self.s_playlist.trace = False
-        # new code end
-
-        #self.get_user_saved_tracks() -- old code
         user_playlists = self.get_user_public_playlists(user_id)
         df_pipeline, artist_data_echonest = self.get_playlist_data()
         return df_pipeline
@@ -231,6 +240,8 @@ class SpotifyFunctions:
 
 
 if __name__ == '__main__':
+    s = SpotifyFunctionsPublic()
+    print s.fit(['1248440864'])
     pass
 
 
