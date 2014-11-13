@@ -1,6 +1,6 @@
 #from sklearn.cluster import KMeans
 import msd_sql_functions as msd
-import spotify_functions as sf
+import spotify_functions as spotify_functions
 import numpy as np
 import pandas as pd
 import requests
@@ -9,6 +9,7 @@ from pyechonest import playlist
 config.ECHO_NEST_API_KEY="IHQR7II9KIYTTAPKS"
 import pyen
 en = pyen.Pyen("IHQR7II9KIYTTAPKS")
+import time
 import graphlab as gl
 
 class CheckModel:
@@ -116,23 +117,21 @@ class GroupRecommender:
         INPUT: spotify_user_ids
         OUTPUT: sf of recommendations for that user
         '''
-        s = sf.SpotifyFunctions()
-        df_pipeline_full = None
+        s = spotify_functions.SpotifyFunctions()
+        df_pipeline_list = []
         for user_id in user_ids:
             df_pipeline_user = s.fit(user_id)
             # creating appropriate column structure
-            if listen_col:
+            if self.listen_col:
                 df_pipeline_user.columns = [self.user_col, self.item_col, self.listen_col]
             else:
                 df_pipeline_user = df_pipeline_user[df_pipeline_user.columns[:2]]
                 df_pipeline_user.columns = [self.user_col, self.item_col]
 
-            # appending to df_pipeline_full if it exists to aggregate in one dataframe all users
-            if not df_pipeline_full:
-                df_pipeline_full = df_pipeline
-            else:
-                df_pipeline_full = pd.concat([df_pipeline_full, df_pipeline]).reset_index()
+            # appending to df_pipeline_list to aggregate
+            df_pipeline_list.append(df_pipeline_user)
 
+        df_pipeline_full = pd.concat(df_pipeline_list).reset_index()
         sf = gl.SFrame(df_pipeline_full)
         ''' may want to check to ensure that doing all at once is equivalent to getting separate recs'''
         self.recs = self.model.recommend(users = user_ids, new_observation_data = sf, k = -1, exclude_known = False)
@@ -243,15 +242,24 @@ class PlaylistRecommender:
 
 
 if __name__ == '__main__':
-    user0 = '000c2074db9bed50913055c8cbe847709b6d3235'
-    user1 = '0015abb5e0ed5d63f20dffe7a350d00fee1e9977'
-    user2 = '00127be0d0a5f735e43ea80a9d172116e20ab886'
-    userlist = [user0, user1, user2]
+    # user0 = '000c2074db9bed50913055c8cbe847709b6d3235'
+    # user1 = '0015abb5e0ed5d63f20dffe7a350d00fee1e9977'
+    # user2 = '00127be0d0a5f735e43ea80a9d172116e20ab886'
+    # userlist = [user0, user1, user2]
+    start = time.time()
+    my_id = '1248440864'
+    liza_id = '1299323226'
+    userlist = [my_id, liza_id]
     gr = GroupRecommender()
     gr.load_model('artist_sim_model_triplets', model_cols = ['user','artist_id','play_count'], 
         user_col = 'user', item_col = 'artist_id', listen_col = 'play_count')
-    tot_recs = gr.create_user_rec_sf(userlist)
+    model_load = time.time()
+    print 'Model Loaded! In: ', model_load - start
+    # tot_recs = gr.create_user_rec_sf(userlist)
+    tot_recs = gr.create_user_rec_spotify(userlist)
     tot_recs_df = tot_recs.to_dataframe()
+    ind_recs = time.time()
+    print 'Individual Recs Made! In: ', ind_recs - model_load
     least_misery_list2, top_item_scores, df_least_misery = gr.least_misery_list(tot_recs_df)
     import artist_term_clustering as a #causes graphlab to crash because KMeans is imported
     atc2 = a.ArtistTermCluster()
@@ -263,6 +271,8 @@ if __name__ == '__main__':
     pr = PlaylistRecommender()
     pr.fit_multiple(playlist_seeds)
     pr.print_playlists()
+    end = time.time()
+    print 'Total Time to Completion: ', end - start
 
 
 
