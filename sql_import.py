@@ -55,6 +55,8 @@ def create_artist_dic_vectors(user_name = 'catalog', artist_col_name = 'artist_n
     pass
 
 
+
+
 if __name__ == '__main__':
     conn, c = connect_sql()
     db, collection = connect_mongo()
@@ -102,6 +104,10 @@ INTO catalog_artist_ranking
 FROM catalog_artist_normcount
 WHERE play_count > 0;
 
+--- EXPORT
+
+COPY (SELECT catalog, artist_name, ranked_play_count FROM catalog_artist_ranking) TO '/Users/Zipfian/Desktop/Ben_Bell/CapstoneProject/catalog_artist_ranking_init.csv' WITH CSV HEADER
+
 --- make pivot table
 
 CREATE EXTENSION tablefunc;
@@ -120,6 +126,5 @@ WITH small AS (SELECT * FROM catalog_artist_ranking LIMIT 30)
 SELECT * FROM small;
 
 SELECT * INTO small FROM catalog_artist_ranking LIMIT 30;
-
 
 

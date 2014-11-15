@@ -19,18 +19,25 @@ class SpotifyFunctionsPublic:
         self.token = None
         self.s = None
         self.user_saved_tracks = None
-        self.user_id = None
+        self.my_id = None
         self.m = msd.MSD_Queries()
         self.artist_data_echonest = None
-        self.user_id = '1248440864' # will always use my id
-        self.token = util.prompt_for_user_token(self.user_id, 
+        self.my_id = '1248440864' # will always use my id
+        self.token = util.prompt_for_user_token(self.my_id, 
             scope = 'playlist-modify-public user-library-read playlist-read-private playlist-modify-private user-library-modify', client_id = '530ddf60a0e840369395009076d9fde7', 
             client_secret = 'd1974e81df054fb2bffa895b741f96f6', redirect_uri = 'https://github.com/bsbell21')
         self.s = sp.Spotify(auth = self.token)
 
     def fit(self, user_ids):
+        #adding this as fix but want to remove
+        self.token = util.prompt_for_user_token(self.my_id, 
+            scope = 'playlist-modify-public user-library-read playlist-read-private playlist-modify-private user-library-modify', client_id = '530ddf60a0e840369395009076d9fde7', 
+            client_secret = 'd1974e81df054fb2bffa895b741f96f6', redirect_uri = 'https://github.com/bsbell21')
+        # remove above when you figure out expiration
+
         df_pipeline_list = []
         for user_id in user_ids:
+            
             df_pipeline_user = self.fit_one(user_id)
             # creating appropriate column structure
             # MOVING THIS TO GroupRecommender
@@ -43,10 +50,12 @@ class SpotifyFunctionsPublic:
             # appending to df_pipeline_list to aggregate
             df_pipeline_list.append(df_pipeline_user)
 
+
         df_pipeline_full = pd.concat(df_pipeline_list)#.reset_index()
         return df_pipeline_full
 
     def fit_one(self, user_id):
+        print user_id
         ''' 
         something really weird happening, number of artists collected from liza dropped
         from 400 to 308 with no changes in artist selection/deletion
@@ -57,12 +66,27 @@ class SpotifyFunctionsPublic:
         '''
 
         user_playlists = self.get_user_public_playlists(user_id)
-        df_pipeline, artist_data_echonest = self.get_playlist_data()
+        print len(user_playlists)
+        df_pipeline, artist_data_echonest = self.get_playlist_data(user_id)
+        print df_pipeline
         return df_pipeline
 
 
     def create_playlist(self, spotify_track_ids, playlist_name):
-        playlists = self.s_playlist.user_playlist_create(self.user_id, playlist_name)
+        self.token = util.prompt_for_user_token(self.my_id, 
+            scope = 'playlist-modify-public user-library-read playlist-read-private playlist-modify-private user-library-modify', client_id = '530ddf60a0e840369395009076d9fde7', 
+            client_secret = 'd1974e81df054fb2bffa895b741f96f6', redirect_uri = 'https://github.com/bsbell21')
+        #REMOVE ABOVE WHEN YOU GET IT NOT TO EXPIRE
+
+        print 'spotify ids: ', spotify_track_ids 
+        playlist_dic = self.s.user_playlist_create(self.my_id, playlist_name)
+        playlist_id = str(playlist_dic['id'])
+        results = self.s.user_playlist_add_tracks(self.my_id, playlist_id, spotify_track_ids)
+        print results
+        print 'playlist run through'
+        print playlist_id
+        print playlist_dic
+        return playlist_id
 
     def convert_artist_id(self, spotify_id):
         '''
@@ -120,12 +144,10 @@ class SpotifyFunctionsPublic:
         self.user_playlist_objects = user_playlist_objects
         return user_playlists
 
-    def get_playlist_data(self):
+    def get_playlist_data(self, user_id):
         '''
         INPUT: all playlists
         OUTPUT: df with artist id, name, and count
-
-
         '''
 
         artist_data = []
@@ -176,7 +198,7 @@ class SpotifyFunctionsPublic:
 
         # converting into format for pipeline
         df_pipeline = df_artist_data_echonest[['artist_id', 'count']]
-        df_pipeline['user'] = self.user_id
+        df_pipeline['user'] = user_id
         df_pipeline = df_pipeline[['user','artist_id','count']]
         df_pipeline.columns = ['user','artist_id','play_count']
         self.df_pipeline = df_pipeline

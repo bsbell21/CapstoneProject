@@ -1,5 +1,5 @@
 #from sklearn.cluster import KMeans
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, AffinityPropagation
 from sklearn.feature_extraction.text import TfidfVectorizer
 import msd_sql_functions as msd
 #import spotify_functions as spotify_functions
@@ -121,6 +121,7 @@ class GroupRecommender:
             df_pipeline.columns = [self.user_col, self.item_col]
 
         # creating recommendations
+        user_ids = list(df_pipeline[self.user_col].unique())
         sf = gl.SFrame(df_pipeline)
         ''' may want to check to ensure that doing all at once is equivalent to getting separate recs'''
         self.recs = self.model.recommend(users = user_ids, new_observation_data = sf, k = -1, exclude_known = False)
@@ -226,61 +227,131 @@ class GroupRecommender:
         df.columns = [item_col_lm, score_col]
         return top_items_leastmisery, sorted_top_item_scores, df
 
-class PlaylistRecommender:
-    '''
-    This class is intended to take in groups of artists, and output playlists
-    '''
-    def __init__(self):
-        self.playlist_list = None
-        self.playlist_id_list = None
 
-    def fit_one(self, artist_ids):
-        playlist_code = en.get('playlist/basic', artist_id = artist_ids, type = 'artist-radio')
-        playlists = []
-        playlist_ids = []
-        for song in playlist_code['songs']:
-            playlists.append('artist: %s, song: %s' % (song['artist_name'], song['title']))
-            playlist_ids.append(song['id'])
-        return playlists, playlist_ids
+# class ArtistTermCluster:
+#     '''
+#     INPUT: list of artist_ids
+#     OUTPUT: cluster labels for each artist
+#     '''
+#     def __init__(self):
+#         self.m = msd.MSD_Queries()
+#         self.labels = None
+#         self.artist_ids = None
+#         self.n_clusters = None
 
-    def fit_multiple(self, artist_id_lists):
-        '''
-        INPUT: list of artist_id lists
-        OUTPUT: None
-        - creates playlists for each list of artist ids, saves to PlaylistRecommender instance
-        '''
-        self.playlist_list = []
-        self.playlist_id_list = []
-        for artist_id_list in artist_id_lists:
-            playlist, playlist_ids = self.fit_one(artist_id_list)
-            self.playlist_list.append(playlist)
-            self.playlist_id_list.append(playlist_ids)
+#     def fit(self, artist_ids, n_clusters = 8):
+#         term_docs = self.get_terms(artist_ids)
+#         labels = self.vectorize(term_docs)
+#         return labels
 
-    def fit_transform(self, artist_ids):
-        pass
+#     def get_terms(self, artist_ids):
+#         '''
+#         INPUT: list of artist_ids
+#         OUTPUT: dataframe with artist_ids and get_terms
+#         '''
+#         self.artist_ids = artist_ids
+#         if type(artist_ids) != list:
+#             artist_ids = [artist_ids]
+#         term_docs = []
+#         for artist_id in artist_ids:
+#             terms = self.m.gen_query(select_columns = '*', table = 'artist_term', 
+#                 filter_column = 'artist_id', filter_values = artist_id)
+#             #print terms
+#             if len(terms) > 0:
+#                 terms_arr = np.array(terms)[:,1]
+#                 terms_list = [i.replace(' ', '_') for i in terms_arr]
+#                 doc = ' '.join(terms_list)
+#                 term_docs.append(doc)
+#             else:
+#                 term_docs.append('no_terms')
+#         return term_docs
 
-    def print_playlists(self):
-        for idx, playlist in enumerate(self.playlist_list):
-            print 'Playlist %s:' % str(idx)
-            for song in playlist:
-                print song
 
+#     def vectorize(self, term_docs, n_clusters = 8):
+#         self.n_clusters = n_clusters
+#         tf = TfidfVectorizer()
+#         X = tf.fit_transform(term_docs)
+#         km = KMeans(n_clusters = n_clusters)
+#         x = km.fit_transform(X)
+#         self.labels = km.labels_
+#         return km.labels_
 
-class ArtistTermCluster:
-    '''
-    INPUT: list of artist_ids
-    OUTPUT: cluster labels for each artist
-    '''
+#     def create_clusters(self, labels, artist_ids, least_misery_ranked_df, item_col = 'artist_id', score_col = 'rank',
+#         cluster_col = 'cluster', df_cols = ['artist_id', 'artist_name', 'cluster']):
+#         '''
+#         INPUT: 
+#         - list of artist_ids to cluster
+#         - recommendation df with scores for each artist
+#         - 
+#         '''
+#         artist_names = np.array(self.m.get_artist_names(artist_ids))
+#         labels = np.array(labels).reshape(-1,1)
+#         artist_ids = np.array(artist_ids).reshape(-1,1)
+#         combo = np.hstack((artist_names, labels))
+#         df = pd.DataFrame(combo)
+#         df.columns = df_cols
+#         df = df.merge(least_misery_ranked_df, how = 'inner', on = item_col)
+#         df[[cluster_col, score_col]] = df[[cluster_col, score_col]].astype(float)
+#         df = df.sort([cluster_col, score_col])
+#         return df
+
+#     def get_playlist_seeds(self, df_clusters, cluster_col = 'cluster'):
+#         '''
+#         INPUT: df with clusters, artists in each cluster, and the least misery ranking of each artist
+#         OUTPUT: np array with row = rank of cluster, top 5 artist ids per cluster
+#         '''
+#         cluster_dict = {}
+#         for cluster in df_clusters[cluster_col].unique():
+#             top_cluster_df = df_clusters[df_clusters[cluster_col] == cluster].head(5)
+#             cluster_dict[cluster] = {}
+#             cluster_dict[cluster]['avg_rank'] = np.mean(top_cluster_df['rank'])
+#             cluster_dict[cluster]['artist_ids'] = np.array(top_cluster_df['artist_id'])
+#             cluster_dict[cluster]['artist_names'] = np.array(top_cluster_df['artist_name'])
+#             cluster_dict[cluster]['artist_ranks'] = np.array(top_cluster_df['rank'])
+#             # might want to add in getting artist terms here
+
+#         ''' below: this is super hacky, improve later? '''
+#         df_cluster_rank = pd.DataFrame(pd.DataFrame(cluster_dict).T['avg_rank'].astype(float)).sort('avg_rank').reset_index().reset_index()
+#         df_cluster_rank.columns = ['cluster_rank', 'cluster', 'avg_rank']
+
+#         cluster_order = df_cluster_rank['cluster'].values
+#         playlist_seeds = []
+#         for cluster in cluster_order:
+#             playlist_seeds.append(list(cluster_dict[cluster]['artist_ids']))
+#         return playlist_seeds, df_cluster_rank, cluster_dict
+
+class ArtistClusterAF:
     def __init__(self):
         self.m = msd.MSD_Queries()
         self.labels = None
         self.artist_ids = None
-        self.n_clusters = None
 
-    def fit(self, artist_ids, n_clusters = 8):
-        term_docs = self.get_terms(artist_ids)
-        labels = self.vectorize(term_docs)
-        return labels
+        self.af = None
+
+    def fit(self, df_least_misery, item_col = 'artist_id', score_col = 'rank', name_col = 'artist_name'):
+        '''
+        INPUT: DataFrame with names, ids, and least misery ranking for each artist
+        OUTPUT: playlist seeds with rankings
+        '''
+        self.df_cols = df_least_misery.columns
+        self.item_col = item_col
+        self.score_col = score_col
+        self.name_col = name_col
+        self.artist_ids = list(df_least_misery[item_col].values)
+
+        # addding names to df least misry
+        self.artist_names = np.array(self.m.get_artist_names(self.artist_ids))#[:,1]
+        self.artist_name_id_df = pd.DataFrame(self.artist_names)
+        self.artist_name_id_df.columns = [item_col, name_col]
+        self.df_least_misery = df_least_misery.merge(self.artist_name_id_df, on = item_col)
+
+        term_docs = self.get_terms(self.artist_ids)
+        feat_mtx = self.vectorize(term_docs)
+        df_least_misery_clustered = self.cluster(feat_mtx)
+        playlist_seed_df, playlist_seeds, playlist_seed_names = self.get_playlist_seeds(df_least_misery_clustered)
+        return playlist_seed_df, playlist_seeds, playlist_seed_names
+
+        pass
 
     def get_terms(self, artist_ids):
         '''
@@ -291,72 +362,128 @@ class ArtistTermCluster:
         if type(artist_ids) != list:
             artist_ids = [artist_ids]
         term_docs = []
-        for artist_id in artist_ids:
-            terms = self.m.gen_query(select_columns = '*', table = 'artist_term', 
-                filter_column = 'artist_id', filter_values = artist_id)
-            #print terms
-            if len(terms) > 0:
-                terms_arr = np.array(terms)[:,1]
-                terms_list = [i.replace(' ', '_') for i in terms_arr]
-                doc = ' '.join(terms_list)
-                term_docs.append(doc)
-            else:
-                term_docs.append('no_terms')
+
+        ''' sql queries don't return in the same order they were sent !!!!'''
+        terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'cluster_artist_nontriplets', 
+            filter_column = 'artist_id', filter_values = artist_ids)
+
+
+        df_terms = pd.DataFrame(terms_all)
+        df_terms.columns = ['artist_id', 'term']
+        # just making sure in the same order as df_least_misery
+        df_ordering = self.df_least_misery.merge(df_terms, on = 'artist_id')
+        df_terms = df_ordering[['artist_id', 'term']]
+        
+        term_docs = df_terms.groupby('artist_id')['term'].agg(' '.join).values
+        self.term_docs_artists = np.array(df_terms.index)
+
+        # may have to get unique values here if not all artist ids guaranteed in databse
+        # term_docs = df_terms.groupby('artist_id')['term'].agg(' '.join).values
+        
         return term_docs
 
-
-    def vectorize(self, term_docs, n_clusters = 8):
-        self.n_clusters = n_clusters
+    def vectorize(self, term_docs):
+        '''
+        clustering artists using affinity propogation, returns cluster labels
+        '''
         tf = TfidfVectorizer()
-        X = tf.fit_transform(term_docs)
-        km = KMeans(n_clusters = n_clusters)
-        x = km.fit_transform(X)
-        self.labels = km.labels_
-        return km.labels_
+        feat_mtx = tf.fit_transform(term_docs)
+        return feat_mtx
 
-    def create_clusters(self, labels, artist_ids, least_misery_ranked_df, item_col = 'artist_id', score_col = 'rank',
-        cluster_col = 'cluster', df_cols = ['artist_id', 'artist_name', 'cluster']):
-        '''
-        INPUT: 
-        - list of artist_ids to cluster
-        - recommendation df with scores for each artist
-        - 
-        '''
-        artist_names = np.array(self.m.get_artist_names(artist_ids))
-        labels = np.array(labels).reshape(-1,1)
-        artist_ids = np.array(artist_ids).reshape(-1,1)
-        combo = np.hstack((artist_names, labels))
-        df = pd.DataFrame(combo)
-        df.columns = df_cols
-        df = df.merge(least_misery_ranked_df, how = 'inner', on = item_col)
-        df[[cluster_col, score_col]] = df[[cluster_col, score_col]].astype(float)
-        df = df.sort([cluster_col, score_col])
-        return df
+    def cluster(self, feat_mtx):
+        # clustering artists based on AffinityPropogation
+        af = AffinityPropagation()
+        af.fit(feat_mtx)
+        self.labels = af.labels_
+        self.af = af
 
-    def get_playlist_seeds(self, df_clusters, cluster_col = 'cluster'):
-        '''
-        INPUT: df with clusters, artists in each cluster, and the least misery ranking of each artist
-        OUTPUT: np array with row = rank of cluster, top 5 artist ids per cluster
-        '''
-        cluster_dict = {}
-        for cluster in df_clusters[cluster_col].unique():
-            top_cluster_df = df_clusters[df_clusters[cluster_col] == cluster].head(5)
-            cluster_dict[cluster] = {}
-            cluster_dict[cluster]['avg_rank'] = np.mean(top_cluster_df['rank'])
-            cluster_dict[cluster]['artist_ids'] = np.array(top_cluster_df['artist_id'])
-            cluster_dict[cluster]['artist_names'] = np.array(top_cluster_df['artist_name'])
-            cluster_dict[cluster]['artist_ranks'] = np.array(top_cluster_df['rank'])
-            # might want to add in getting artist terms here
+        # adding cluster labels to least misery dataframe and sorting by rank and cluster
+        df_least_misery_clustered = self.df_least_misery.copy()
+        df_least_misery_clustered['cluster'] = self.labels
+        df_least_misery_clustered[['cluster', self.score_col]] = df_least_misery_clustered[['cluster', self.score_col]].astype(float)
+        ''' will do different sorting if not using rank '''
+        df_least_misery_clustered = df_least_misery_clustered.sort(['cluster', self.score_col])
+        self.df_least_misery_clustered = df_least_misery_clustered
+        return df_least_misery_clustered
 
-        ''' below: this is super hacky, improve later? '''
-        df_cluster_rank = pd.DataFrame(pd.DataFrame(cluster_dict).T['avg_rank'].astype(float)).sort('avg_rank').reset_index().reset_index()
-        df_cluster_rank.columns = ['cluster_rank', 'cluster', 'avg_rank']
+    def get_playlist_seeds(self, df_least_misery_clustered, penalize_less_than = 4, penalization = 100):
 
-        cluster_order = df_cluster_rank['cluster'].values
-        playlist_seeds = []
-        for cluster in cluster_order:
-            playlist_seeds.append(list(cluster_dict[cluster]['artist_ids']))
-        return playlist_seeds, df_cluster_rank, cluster_dict
+        # taking top 5 artists per cluster and making playlist seeds
+        playlist_seed_df_list = []
+        avg_rank = []
+        for i in np.unique(self.labels):
+            top_cluster = df_least_misery_clustered[df_least_misery_clustered['cluster'] == i].head(5)
+            rankmean = top_cluster[self.score_col].mean()
+            # trying to remove clusters with < 4 artists from top
+            if len(top_cluster) < penalize_less_than:
+                rankmean += penalization
+            top_cluster['avg_rank'] = rankmean
+            avg_rank.append(rankmean)
+            playlist_seed_df_list.append(top_cluster)
+
+        # put together playlist seed df
+        idx = np.argsort(np.array(avg_rank))
+        playlist_seed_df_list = np.array(playlist_seed_df_list)[idx]
+
+        playlist_seeds = [i[self.item_col].values for i in playlist_seed_df_list]
+        playlist_seed_names = [', '.join(list(i[self.name_col].values)) for i in playlist_seed_df_list]
+        playlist_seed_df = pd.concat(list(playlist_seed_df_list))
+
+        return playlist_seed_df, playlist_seeds, playlist_seed_names
+
+
+
+class PlaylistRecommender:
+    '''
+    This class is intended to take in groups of artists, and output playlists
+    '''
+    def __init__(self):
+        self.playlist_list = None
+        self.playlist_id_list = None
+
+    def fit_one(self, artist_ids):
+       # playlist_code = en.get('playlist/basic', artist_id = artist_ids, type = 'artist-radio', bucket = )
+        playlist_code = en.get('playlist/static', artist_id = artist_ids , type = 'artist-radio', bucket = ['id:spotify', 'tracks'], limit='true')
+        playlists = []
+        playlist_ids = []
+        playlist_spotify_track_ids = []
+        for song in playlist_code['songs']:
+            playlists.append('artist: %s, song: %s' % (song['artist_name'], song['title']))
+            playlist_ids.append(song['id'])
+            spotify_track_id = str(song['tracks'][0]['foreign_id'].split(':')[-1])
+            playlist_spotify_track_ids.append(spotify_track_id)
+        return playlists, playlist_ids, playlist_spotify_track_ids
+
+    def fit_multiple(self, artist_id_lists):
+        '''
+        INPUT: list of artist_id lists
+        OUTPUT: None
+        - creates playlists for each list of artist ids, saves to PlaylistRecommender instance
+        '''
+        self.playlist_list = []
+        self.playlist_id_list = []
+        self.playlist_spotify_id_list = []
+        for artist_id_list in artist_id_lists:
+            playlist, playlist_ids, playlist_spotify_track_ids = self.fit_one(artist_id_list)
+            self.playlist_list.append(playlist)
+            self.playlist_id_list.append(playlist_ids)
+            self.playlist_spotify_id_list.append(playlist_spotify_track_ids)
+
+    def fit_transform(self, artist_ids):
+        pass
+
+    def print_playlists(self):
+        for idx, playlist in enumerate(self.playlist_list):
+            print 'Playlist %s:' % str(idx)
+            for song in playlist:
+                print song
+
+    def print_playlists_withseeds(self, playlist_seed_names):
+        for idx, playlist in enumerate(self.playlist_list):
+            print 'Playlist %s, seeded with: %s' % (str(idx), playlist_seed_names[idx])
+            for song in playlist:
+                print song
+
 
 class Pipeline:
     '''
@@ -374,22 +501,25 @@ class Pipeline:
         self.playlist_list = None
         self.playlist_id_list = None
         self.playlist_seeds = None
+        self.playlist_seed_df = None
+        self.playlist_seed_names = None
         self.df_pipeline = None
+        self.user_ids = None
 
     def fit(self, df_pipeline):
         start = time.time()
-
         self.df_pipeline = df_pipeline
         least_misery_list = self.get_group_rec(df_pipeline)
         lm = time.time()
         print 'Least misery list calculated in: ', lm - start
 
-        self.cluster(least_misery_list)
+        self.cluster()
         cl = time.time()
         print 'Clustering completed in: ', cl - lm
 
         self.recommend_playlists()
-        self.playlist_recommender.print_playlists()
+        self.playlist_recommender.print_playlists_withseeds(self.playlist_seed_names)
+        print self.playlist_seed_df
         end = time.time()
         print 'Total time to completion: ', end - start
 
@@ -407,20 +537,25 @@ class Pipeline:
         tot_recs_df = tot_recs.to_dataframe()
         least_misery_list, top_item_scores, df_least_misery = gr.least_misery_list(tot_recs_df)
         self.df_least_misery = df_least_misery
+        self.gr = gr
         return least_misery_list
 
-    def cluster(self, least_misery_list):
+    def cluster(self):
         '''
         Creates artist clusters from artists that cause least misery, ranks the clusters by top 5 artists,
         and passes those top 5 artists to be playlist seeds
         '''
         #import artist_term_clustering as a #causes graphlab to crash because KMeans is imported
-        atc = ArtistTermCluster()
-        labels = atc.fit(list(least_misery_list))
-        df_clusters = atc.create_clusters(labels, least_misery_list, self.df_least_misery)
-        playlist_seeds, df_cluster_rank, cluster_dict = atc.get_playlist_seeds(df_clusters)
-        self.playlist_seeds = playlist_seeds
-        self.df_cluster_rank = df_cluster_rank
+        # atc = ArtistTermCluster()
+        # labels = atc.fit(list(least_misery_list))
+        # df_clusters = atc.create_clusters(labels, least_misery_list, self.df_least_misery)
+        # playlist_seeds, df_cluster_rank, cluster_dict = atc.get_playlist_seeds(df_clusters)
+        # self.playlist_seeds = playlist_seeds
+        # self.df_cluster_rank = df_cluster_rank
+
+        ac = ArtistClusterAF()
+        self.ac = ac
+        self.playlist_seed_df, self.playlist_seeds, self.playlist_seed_names = ac.fit(self.df_least_misery)
 
     def recommend_playlists(self):
         '''
@@ -430,23 +565,27 @@ class Pipeline:
         pr.fit_multiple(self.playlist_seeds)
         self.playlist_list = pr.playlist_list
         self.playlist_id_list = pr.playlist_id_list
+        self.playlist_spotify_id_list = pr.playlist_spotify_id_list
         self.playlist_recommender = pr
 
 
 
 
 if __name__ == '__main__':
+
     start = time.time()
-    my_id = '1248440864'
-    liza_id = '1299323226'
-    userlist = [my_id, liza_id]
+    # my_id = '1248440864'
+    # liza_id = '1299323226'
+    # userlist = [my_id, liza_id]
+    df_pipeline = pd.read_csv('liza_ben_df.csv')[['user','artist_id','play_count']]
     s = spotify_functions.SpotifyFunctionsPublic()
-    df_pipeline = s.fit(userlist)
+    #df_pipeline = s.fit(userlist)
     model = gl.load_model('artist_sim_model_triplets')
     pl = Pipeline(model, model_cols = ['user','artist_id','play_count'], 
         user_col = 'user', item_col = 'artist_id', listen_col = 'play_count')
     pl.fit(df_pipeline)
     end = time.time()
+    print pl.playlist_spotify_id_list
     print 'total time: ', end - start
 
 

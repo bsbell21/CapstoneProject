@@ -2,12 +2,14 @@ from flask import Flask
 from flask import request
 from flask import render_template
 import requests
-import bs4
 import random
-import pipeline_full_111214 as p
+import spotify_functions_mult131114 as spotify_functions
+import pipeline_full_131214 as p
 
+import pandas as pd
 import numpy as np
 import ipdb
+import graphlab as gl
 
 '''
 1. Create an app.py file in your my_app folder
@@ -18,9 +20,14 @@ to submit new text data. 4. Build a predict_page that processes
 the user submitted form data, and returns the result of your prediction.
 
 '''
-# load pickled models
+
 
 app = Flask(__name__)
+
+# load model and create SpotifyFunctions instance to call later
+s = spotify_functions.SpotifyFunctionsPublic()
+model = gl.load_model('artist_sim_model_triplets')
+df_preload = pd.read_csv('liza_ben_df.csv')[['user','artist_id','play_count']]
 
 
 @app.route('/')
@@ -43,10 +50,23 @@ def playlists():
             print user_name
 
     print user_names
-    pipeline = p.Pipeline('artist_sim_model_triplets', model_cols = ['user','artist_id','play_count'], 
+   # df_pipeline = s.fit(user_names)
+    df_pipeline = df_preload
+    pipeline = p.Pipeline(model, model_cols = ['user','artist_id','play_count'], 
         user_col = 'user', item_col = 'artist_id', listen_col = 'play_count')
-    pipeline.fit(user_names)
-    data = [str(i) for i in pipeline.playlist_list]
+    pipeline.fit(df_pipeline)
+    playlist_ids = []
+    for idx, playlist in enumerate(pipeline.playlist_spotify_id_list[:2]):
+        playlist_id = s.create_playlist(playlist, 'Playlist ' + str(idx + 1))
+        playlist_ids.append(playlist_id)
+
+
+    embed_base = "https://embed.spotify.com/?uri=https://play.spotify.com/user/1248440864/playlist/"
+    playlist_html = [embed_base + str(i) for i in playlist_ids]
+    print 'playlist_html ', playlist_html
+    print 'playlist_ids ', playlist_ids
+    data = playlist_html
+    print data
     return render_template('/playlists.html', data = data)
 
 
