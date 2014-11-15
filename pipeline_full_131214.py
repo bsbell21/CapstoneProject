@@ -91,6 +91,8 @@ class GroupRecommender:
         self.top_items_leastmisery = None
         self.sorted_top_item_scores = None
         self.user_listens = None
+        self.all_recs_sf = None
+        self.score_col = None
 
     def load_model(self, model, model_cols, user_col, item_col, listen_col=None):
         if type(model) == str:
@@ -101,6 +103,7 @@ class GroupRecommender:
         self.user_col = user_col
         self.item_col = item_col
         self.listen_col = listen_col
+
 
 
     def fit(self, user_ids):
@@ -194,26 +197,34 @@ class GroupRecommender:
             - top_n_cluster = top songs to cluster
         OUTPUT: ranked song_id sf with least misery score
         '''
+        self.score_col = score_col
         top_items = []
         top_item_scores = []
         users = all_recs_sf[user_col_lm].unique()
+
 
         # getting top artists for each user it top_items
         for user in users:
             user_sf = all_recs_sf[all_recs_sf[user_col_lm] == user]
             user_items = user_sf[item_col_lm].unique()
-            top_items = top_items + list(user_items[:top_n_users]) 
+            top_items = top_items + list(user_items[:top_n_users])
             # make sure this is getting the top artists
             # maybe sort it?
 
         # remove duplicates
         top_items = list(set(top_items))
+        users_least_misery_list = [] # making list for each user for whole least misery list
+        # filling users_least_misery_list
+
+        # for users in users:
+        #     user_least_misery_sf = all_recs_sf[all_recs_sf[user_col_lm]]
 
         # go through each artist in top artists, get least misery score
         for item in top_items:
             ''' IMPORTANT! change to min if using score instead of rank '''
             least_misery_score = all_recs_sf[all_recs_sf[item_col_lm] == item][score_col].max()
             top_item_scores.append(least_misery_score)
+
 
         # get top artists based on least misery score
         ''' IMPORTANT! change to max if using score instead of rank '''
@@ -374,7 +385,8 @@ class ArtistClusterAF:
         df_ordering = self.df_least_misery.merge(df_terms, on = 'artist_id')
         df_terms = df_ordering[['artist_id', 'term']]
         
-        term_docs = df_terms.groupby('artist_id')['term'].agg(' '.join).values
+        # need to set sort to False or it will reorder
+        term_docs = df_terms.groupby('artist_id', sort = False)['term'].agg(' '.join).values
         self.term_docs_artists = np.array(df_terms.index)
 
         # may have to get unique values here if not all artist ids guaranteed in databse
@@ -505,11 +517,15 @@ class Pipeline:
         self.playlist_seed_names = None
         self.df_pipeline = None
         self.user_ids = None
+        self.least_misery_list = None #should remove
+        self.tot_recs_df = None
+        self.score_col = None
+        self.tot_recs_lm_pivot = None
 
     def fit(self, df_pipeline):
         start = time.time()
         self.df_pipeline = df_pipeline
-        least_misery_list = self.get_group_rec(df_pipeline)
+        self.least_misery_list = self.get_group_rec(df_pipeline)
         lm = time.time()
         print 'Least misery list calculated in: ', lm - start
 
@@ -534,10 +550,31 @@ class Pipeline:
         gr.load_model(self.model, model_cols = self.model_cols, user_col = self.user_col, 
             item_col = self.item_col, listen_col = self.listen_col)
         tot_recs = gr.create_user_rec_from_df(self.df_pipeline)
+
+        
+
         tot_recs_df = tot_recs.to_dataframe()
+        self.tot_recs_df = tot_recs_df # should remove
         least_misery_list, top_item_scores, df_least_misery = gr.least_misery_list(tot_recs_df)
         self.df_least_misery = df_least_misery
         self.gr = gr
+        self.score_col = gr.score_col #should be rank
+
+
+        # getting all user scores for each item in df least misery
+        tot_recs_df_lm = tot_recs_df[tot_recs_df[self.item_col].isin(least_misery_list)]
+
+            # creating "score" proxy from rank by dividing all ranks by max rank in least misery and subtracting from 1
+            # later should use score and just normalize
+        max_rank = tot_recs_df_lm[self.score_col].max()
+        tot_recs_df_lm[self.score_col] = tot_recs_df_lm[self.score_col].apply(lambda x: 1 - ((1.0*x)/max_rank))
+        tot_recs_lm_pivot = tot_recs_df_lm.pivot(self.item_col, self.user_col, self.score_col)
+        self.tot_recs_lm_pivot = tot_recs_lm_pivot
+
+
+        # lm_recs_df = tot_recs[[self.item_col].isin(list(least_misery_list))]
+        # lm_recs_df = lm_recs_df.pivot
+
         return least_misery_list
 
     def cluster(self):
