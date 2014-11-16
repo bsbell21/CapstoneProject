@@ -57,7 +57,7 @@ def playlists():
     pipeline.fit(df_pipeline)
     playlist_ids = []
     for idx, playlist in enumerate(pipeline.playlist_spotify_id_list[:2]):
-        playlist_id = s.create_playlist(playlist, 'Playlist ' + str(idx + 1))
+        playlist_id = s.create_playlist(playlist, pipeline.playlist_names[idx])
         playlist_ids.append(playlist_id)
 
 
