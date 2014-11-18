@@ -14,6 +14,7 @@ import pyen
 en = pyen.Pyen("IHQR7II9KIYTTAPKS")
 import time
 import graphlab as gl
+import ipdb
 
 '''
 This differs from pipeline_full_111214 in that it is removing SpotifyFunctions from the pipeline and placing it outside
@@ -434,8 +435,14 @@ class ArtistClusterAF:
         term_docs = []
 
         ''' sql queries don't return in the same order they were sent !!!!'''
-        terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'cluster_artist_nontriplets', 
+        # slower more accurate version
+        # terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'cluster_artist_nontriplets', 
+        #     filter_column = 'artist_id', filter_values = artist_ids)
+        start = time.time()
+        terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'all_artist_terms', 
             filter_column = 'artist_id', filter_values = artist_ids)
+        end = time.time()
+        print 'terms queried in: ', start - end
 
 
         df_terms = pd.DataFrame(terms_all)
@@ -447,6 +454,8 @@ class ArtistClusterAF:
         # need to set sort to False or it will reorder
         term_docs = df_terms.groupby('artist_id', sort = False)['term'].agg(' '.join).values
         self.term_docs_artists = np.array(df_terms.index)
+        final = time.time()
+        print 'artist term vectors created in: ', final - end
 
         # may have to get unique values here if not all artist ids guaranteed in databse
         # term_docs = df_terms.groupby('artist_id')['term'].agg(' '.join).values
@@ -463,6 +472,7 @@ class ArtistClusterAF:
 
     def cluster(self, feat_mtx, df_lm_allusers):
         # clustering artists based on AffinityPropogation
+        start = time.time()
         af = AffinityPropagation()
         af.fit(feat_mtx)
         self.labels = af.labels_
@@ -477,6 +487,8 @@ class ArtistClusterAF:
         # now set to false as looking for highest score
         df_least_misery_clustered = df_least_misery_clustered.sort(['cluster', self.score_col], ascending = False)
         self.df_least_misery_clustered = df_least_misery_clustered
+        end = time.time()
+        print 'clustering completed in: ', end - start
         return df_least_misery_clustered
 
     def get_playlist_seeds(self, df_least_misery_clustered, penalize_less_than = 4, penalization = .3):
@@ -507,19 +519,32 @@ class ArtistClusterAF:
         # resetting index and then grouping 
         psd_group = psd_group.reset_index().groupby('cluster')
         # creating table with count data for each cluster so I can penalize small clusters
+        self.psd1 = psd_group
         psd_group_count = psd_group.count()[['cluster_score']]
+        print 'psd_group count: ', psd_group_count
+        # ipdb.set_trace()
         psd_group_count.columns = ['count']
         # getting mean of all other columns and adding count
+        print 'psd_group count: ', psd_group_count
+        self.psd2 = psd_group
+        print 'psd_group before: ', psd_group
         psd_group = pd.merge(psd_group.mean(), psd_group_count, left_index = True, right_index = True)
+        print 'psd_group after: ', psd_group
         
         # creating boolean mask for penalization and penalizing
         psd_group['count'] = psd_group['count'].apply(lambda x: x < penalize_less_than)
+        print 'psd_group2', psd_group
         psd_group['cluster_score'] = psd_group['cluster_score'] - penalization*psd_group['count']
         # removing count column
-        psd_group = psd_group[psd_group.columns - ['count']]
+        print 'psd_group3', psd_group
+        self.psd3 = psd_group
+        psd_group = psd_group.drop('count', axis = 1)
+        print 'psd_group4', psd_group
+        self.psd4 = psd_group
         psd_group = psd_group.sort('cluster_score', ascending = False).reset_index()
         print playlist_seed_df
-        print psd_group
+        print 'psd_group5', psd_group
+        self.psd5 = psd_group
         self.playlist_seed_df = playlist_seed_df
         self.psd_group = psd_group
 
@@ -641,15 +666,22 @@ class PlaylistRecommender:
         INPUT: list of artist_ids seeding playlist
         OUTPUT: Top 3 most common terms for group of artists
         '''
-        terms_all = self.m.gen_query(select_columns = '*', table = 'all_artist_terms', 
-            filter_column = 'artist_id', filter_values = artist_ids)
+        try:
+            terms_all = self.m.gen_query(select_columns = '*', table = 'all_artist_terms', 
+                filter_column = 'artist_id', filter_values = artist_ids)
 
-        df_terms = pd.DataFrame(terms_all)
-        df_terms.columns = ['artist_id','term']
-        df_terms = df_terms[['term']]
-        df_terms['count'] = 1
-        df_terms_grouped = df_terms.groupby('term').sum().sort('count', ascending = False).reset_index()
-        return '/'.join(list(df_terms_grouped['term'][:3].values))
+
+            df_terms = pd.DataFrame(terms_all)
+            df_terms.columns = ['artist_id','term']
+            df_terms = df_terms[['term']]
+            df_terms['count'] = 1
+            df_terms_grouped = df_terms.groupby('term').sum().sort('count', ascending = False).reset_index()
+            result = '/'.join(list(df_terms_grouped['term'][:3].values))
+        except:
+            print terms_all
+            result = 'wetunes'
+        
+        return result
 
     def get_mult_playlist_terms(self, artist_ids_lists):
         pass

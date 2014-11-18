@@ -1,0 +1,21 @@
+<html>
+<head>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='mycss.css') }}">
+</head>
+<body style="color:#E8ADAA">
+   <p><h1>Fill out this form to get a sweet new wallpaper!</h1></p>
+
+   <p><form action='/get_wallpaper' method='POST' id='wform'>
+       <div> Search Query:
+       <input type='text' name='Search_Query'></input>
+       </div>
+       <div> N Rows:
+       <input type='text' name='N_Rows' value = '1'></input>
+       </div>
+       <div> N Cols:
+       <input type='text' name='N_Cols' value = '1'></input>
+       </div>
+       <input type='submit' value='GET ME WALLPAPER!'/>
+   </form></p>
+</body>
+</html>

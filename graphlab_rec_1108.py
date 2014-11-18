@@ -59,36 +59,14 @@ def get_item_vectors(sf, least_misery_list, binarize = True, item_col = 'song_id
     1. array with rows for each item, columns for each user (w/ binary data?)
     2. song_id list corresponding to row in array
     '''
+    print 'Filtering '
     sf = sf.filter_by(gl.SArray(list(least_misery_list)), column_name = item_col)
     if binarize:
+        print 'Binarizing...'
         sf[listen_col] = 1
     df = sf.to_dataframe()
     pivot = df.pivot(item_col, user_col, listen_col).fillna(0)
     return pivot.values, list(pivot.index)
-
-
-
-def connect_sql():
-    conn = psycopg2.connect(dbname='msd', user='postgres', host='/tmp')
-    c = conn.cursor()
-    return conn, c
-
-def get_song_info(song_id):
-    '''
-    INPUT: song id or list of song_ids
-    OUTPUT: list of tuples with song name and artist name
-    '''
-    conn, c = connect_sql()
-    c.execute(
-    '''
-    SELECT artist_name, title FROM songs WHERE song_id IN %s;
-    '''
-    % (tuple(song_id)))
-    conn.commit()
-    return c.fetchOne()
-    
-
-
 
 
 

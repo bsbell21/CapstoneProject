@@ -1,0 +1,154 @@
+<html>
+<head>
+
+<style>
+.highcharts-grid path {
+    stroke-width: 0;
+}
+
+.highcharts-title text {
+  style: "font-size:0px";
+  font-size: 0px;
+  x:"0";
+}
+
+.highcharts-tooltip tspan:nth-child(1) {
+    display:none;
+}
+.highcharts-tooltip tspan:nth-child(2) {
+    display:none;
+}
+</style>
+
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script src="http://code.highcharts.com/highcharts.js"></script>
+<script src="http://code.highcharts.com/modules/exporting.js"></script>
+
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='mycss.css') }}">
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap-theme.min.css">
+
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+   <!-- Bootstrap core CSS -->
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+    <!-- Custom styles for this template -->
+    <link href="../static/carousel.css" rel="stylesheet">
+
+
+</head>
+<body>
+
+
+  <div class="jumbotron" style = "padding:30px 15px">
+        <h1>Playlists for all!</h1>
+        <p>We've gone ahead and created a series of playlists we think your whole group
+        will enjoy. Check them out below!</p>
+        <p><a href="/group_login" class="btn btn-primary btn-lg" role="button">Get more playlists!</a></p>
+  </div>
+
+    <hr class="featurette-divider2">
+    {% set cnt = 0 %}
+    {% for i in data %}
+
+        {% set cnt = cnt + 1%}
+<div class = 'container'>
+    <div class = "row">
+        <div class = "col-md-7">
+            <!-- <h2 class = "featurette-heading">Playlists for All!</h2> -->
+            <div style="margin-left: 10%">
+            <h2>Playlist {{cnt}}: {{i['playlist_name']}}</h2>
+            <h2><small>Seeded with: {{i['seed_artist_names']}}</small></h2>
+<!--             <p class = 'lead' margin-bottom:100px> 
+             Seeded with: Artist 1, 2 and 3
+            </p> -->
+          </div>
+            <div id="{{i['playlist_html'][:-4:-1]}}" style="min-width: 310px; max-width: 600px; height: 300px; margin: 0 auto; horizontal-align:left; "></div>
+        </div>
+        <div class = "col-md-5">
+
+            <iframe src="{{i['playlist_html']}}" width="300" height="380" frameborder="0" allowtransparency="true"></iframe>
+        </div>
+    </div>
+</div>
+<hr class="featurette-divider2">
+
+<script>
+
+    $(function () {
+    $('{{"#" + i["playlist_html"][:-4:-1]}}').highcharts({
+        chart: {
+            type: 'bar'
+        },
+        title: {
+            text: null
+        },
+
+        xAxis: {
+
+            categories: {{i['user_ids'] | safe}},
+            title: {
+                text: null
+            }
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: 'User Preference Scores',
+                align: 'high'
+            },
+            // labels: {
+            //     overflow: 'justify'
+            // }
+        },
+        
+        plotOptions: {
+            // bar: {
+            //     dataLabels: {
+            //         enabled: false
+            //     }
+            // }
+        },
+        credits: {
+            enabled: false
+        },
+        series: [{
+            name: 'Preference Score',
+            data: {{i['user_scores']}}
+        }],
+        legend: {
+            enabled: false,
+        },
+    });
+});
+</script>
+
+{% endfor %}
+
+<!-- <p><h1>Playlists for All!</h1></p>
+    {% set cnt = 0 %}
+    {% for i in data %}
+        {% set cnt = cnt + 1%}
+
+        <p> Playlist {{cnt}}: </p>
+        <iframe src= {{i}} width="300" height="380" frameborder="0" allowtransparency="true" style="float:left"></iframe>
+
+    {% endfor %}
+ -->
+
+</body>
+</html>

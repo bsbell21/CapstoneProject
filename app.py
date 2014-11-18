@@ -9,7 +9,9 @@ import pipeline_full_131214 as p
 import pandas as pd
 import numpy as np
 import ipdb
-import graphlab as gl
+import graphlab as gl # have in final
+import pickle
+import re
 
 '''
 1. Create an app.py file in your my_app folder
@@ -26,119 +28,113 @@ app = Flask(__name__)
 
 # load model and create SpotifyFunctions instance to call later
 s = spotify_functions.SpotifyFunctionsPublic()
-model = gl.load_model('artist_sim_model_triplets')
-df_preload = pd.read_csv('liza_ben_df.csv')[['user','artist_id','play_count']]
+model = gl.load_model('artist_sim_model_triplets') # have in final
+# df_preload = pd.read_csv('liza_ben_df.csv')[['user','artist_id','play_count']] # remove from final
 
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/group_login')
-def group_login():
-    return render_template('/group_login.html')
+@app.route('/sign_in')
+def sign_in():
+    return render_template()
 
-@app.route('/playlists', methods = ['POST'])
+@app.route('/group_login_signin', methods = ['GET'])
+def group_login_signin():
+    # for user coming from signin page with access token
+    access_token = request.values['access_token']
+    refresh_token = request.values['refresh_token']
+    display_name = request.values['display_name']
+    user_id = request.values['user_id']
+    data = [access_token, refresh_token, user_id, display_name]
+    # ipdb.set_trace()
+    return render_template('/group_login_signin.html', data = data)
+
+@app.route('/group_login_practice')
+def group_login():
+    # for user coming from quick start
+    return render_template('/group_login_practice.html')
+
+@app.route('/playlists_new', methods = ['GET','POST'])
 def playlists():
+    n_playlists = 5
     # getting user names from group_login page
     user_names = []
+    if 'access_token' in request.form:
+        access_token = request.form['access_token']
+    if 'refresh_token' in request.form:
+        refresh_token = request.form['refresh_token']
+    if 'user_id' in request.form:
+        prim_user_id = request.form['user_id']
+    if 'display_name' in request.form:
+        display_name = request.form['display_name']
     print 'in playlists'
+    
     for i in range(5):
         user_name = request.form['user_' + str(i+1)]
         if len(user_name) > 0:
             user_names.append(user_name)
             print user_name
-
     print user_names
-   # df_pipeline = s.fit(user_names)
-    df_pipeline = df_preload
+    acceptable ='ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_-abcdefghijklmnopqrstuvwxyz1234567890?><:"{}+~ '
+    user_names = [i.decode('utf-8') for i in user_names]
+    for i in user_names:
+        for ch in i:
+            if ch not in acceptable:
+                i = i.replace(ch, '')
+    df_pipeline = s.fit(user_names) # keep in final
+
+    # df_pipeline = df_preload # remove in final
     pipeline = p.Pipeline(model, model_cols = ['user','artist_id','play_count'], 
-        user_col = 'user', item_col = 'artist_id', listen_col = 'play_count')
-    pipeline.fit(df_pipeline)
+        user_col = 'user', item_col = 'artist_id', listen_col = 'play_count') # keep in final
+    pipeline.fit(df_pipeline) # keep in final
+    playlist_spotify_id_list, playlist_seed_names, playlist_seed_scores, playlist_names = pipeline.playlist_spotify_id_list, pipeline.playlist_seed_names, pipeline.playlist_seed_scores, pipeline.playlist_names # keep in final 
+    
+    # if preloading all data use below
+    # playlist_spotify_id_list, playlist_seed_names, playlist_seed_scores, playlist_names = pickle.load(open('preloads/pipeline_objs_1116.pkl', 'rb')) # remove in final
+    # pl_playlist_ids = ['3HoRrJNYuDkhATqm4NEZSW','0jXqizs7Z0sWWVaJaqyP2r'] # remove in final
+    all_data = []
     playlist_ids = []
-    for idx, playlist in enumerate(pipeline.playlist_spotify_id_list[:2]):
-        playlist_id = s.create_playlist(playlist, pipeline.playlist_names[idx])
-        playlist_ids.append(playlist_id)
-
-
+    user_ids = list(playlist_seed_scores.columns - ['cluster','cluster_score'])
+    playlist_names = playlist_names[:n_playlists]
     embed_base = "https://embed.spotify.com/?uri=https://play.spotify.com/user/1248440864/playlist/"
+    for idx, playlist in enumerate(playlist_spotify_id_list[:n_playlists]):
+        all_data.append({})
+        playlist_id = s.create_playlist(playlist, playlist_names[idx]) # keep in final
+        # playlist_id = pl_playlist_ids[idx] # remove in final
+        playlist_ids.append(playlist_id)
+        p_id = playlist_id
+        p_id = re.sub(r'([^\s\w]|_)+', '', p_id)
+        all_data[idx]['playlist_id'] = p_id
+
+        all_data[idx]['playlist_html'] = embed_base + str(playlist_id)
+        all_data[idx]['seed_artist_names'] = playlist_seed_names[idx].decode('utf-8')
+        # all_data[idx]['seed_artist_names'] = all_data[idx]['seed_artist_names'].encode('ascii','ignore')
+        all_data[idx]['scores'] = {} # should remove this or userids/scores - redundant
+        all_data[idx]['user_ids'] = []
+        all_data[idx]['user_scores'] = []
+        all_data[idx]['playlist_name'] = playlist_names[idx]
+        for user_id in user_ids:
+            all_data[idx]['scores'][user_id] = playlist_seed_scores[user_id][idx]
+            # all_data[idx]['user_ids'].append(re.sub(r'([^\s\w]|_)+', '', user_isign_ind))
+            all_data[idx]['user_ids'].append(user_id.decode('utf-8'))
+            all_data[idx]['user_scores'].append(round(playlist_seed_scores[user_id][idx],2))
+        # passing in user_id list as string to avoid problems with translation
+        all_data[idx]['user_ids'] = str(all_data[idx]['user_ids'])
+
+    
     playlist_html = [embed_base + str(i) for i in playlist_ids]
+
     print 'playlist_html ', playlist_html
     print 'playlist_ids ', playlist_ids
-    data = playlist_html
-    print data
-    return render_template('/playlists.html', data = data)
+    # data = playlist_html
+    data = all_data
+    for i in data:
+        print i
+        print type(i)
+    return render_template('/playlists_new.html', data = data)
 
-
-
-
-
-
-
-@app.route('/get_wallpaper', methods=['POST'])
-def get_wallpaper():
-    search = request.form['Search_Query']
-    numrows = int(request.form['N_Rows'])
-    numcols = int(request.form['N_Cols'])
-    search_q = 'http://imgur.com/search?q=' + search
-    data = requests.get(search_q)
-    soup = bs4.BeautifulSoup(data.text)
-    a = soup.findAll('a', {'class' : 'image-list-link'})
-
-    # get image links and put in list
-    images = []
-    for i in a:
-        images.append('http://' + i.findChildren('img')[0]['src'][2:])
-
-    data = random.sample(images, numrows*numcols)
-    print data
-    return render_template('/get_wallpaper.html', data = data)
-
-
-
-
-# @app.route('/submission_page')
-# def submission_page():
-#     return '''
-#     <form action="/predict" method='POST' >
-#         <input type="text" name="user_input" />
-#         <input type="submit" />
-#     </form>
-#     '''
-
-# @app.route('/predict', methods=['POST'] )
-
-# create function to predict based off of pickled models
-
-# def predict():
-#     data = request.form['user_input']
-#    # print data
-#     #print type(data)
-#     data = str(data)
-#     #ipdb.set_trace()
-#     vec = tf.transform([data]).toarray()
-#     x = mnb.predict(vec)
-#     return str(x)
-
-# @app.route('/word_counter', methods=['POST'] )
-# def word_counter():
-#     # get data from request form, the key is the name you set in your form
-#     data = request.form['user_input']
-
-#     # convert data from unicode to string
-#     data = str(data)
-
-#     # run a simple program that counts all the words
-#     dict_counter = {}
-#     for word in data.lower().split():
-#         if word not in dict_counter:
-#             dict_counter[word] = 1
-#         else:
-#             dict_counter[word] += 1
-#     total_words = len(dict_counter)
-
-#     # now return your results
-#     return 'Total words is %i, <br> dict_counter is: %s' % (total_words, dict_counter)
 
 
 if __name__ == '__main__':

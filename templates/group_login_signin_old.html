@@ -1,0 +1,29 @@
+<html>
+<head>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='mycss.css') }}">
+</head>
+<body>
+   <p><h1>Enter your spotify ids below to get playlists for your group!</h1></p>
+
+   <p><form action='/playlists' method='POST' id='wform'>
+       <input type = 'hidden' name = 'access_token' value = {{data[0]}}></input>
+       <input type = 'hidden' name = 'refresh_token' value = {{data[1]}}></input>
+       <div> User 1
+       <input type='text' name='user_1' value = '1248440864'></input>
+       </div>
+       <div> User 2
+       <input type='text' name='user_2' value = '1299323226'></input>
+       </div>
+       <div> User 3
+       <input type='text' name='user_3'></input>
+       </div>
+       <div> User 4
+       <input type='text' name='user_4'></input>
+       </div>
+       <div> User 5
+       <input type='text' name='user_5'></input>
+       </div>
+       <input type='submit' value='Get Playlists!'/>
+   </form></p>
+</body>
+</html>

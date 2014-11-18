@@ -2,6 +2,10 @@ import psycopg2
 from pymongo import MongoClient
 import json
 
+'''
+This is used to import data from mongo to SQL
+'''
+
 def connect_sql():
     conn = psycopg2.connect(dbname='msd', user='postgres', host='/tmp')
     c = conn.cursor()

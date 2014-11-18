@@ -1,0 +1,10 @@
+<html>
+<head>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='mycss.css') }}">
+</head>
+<body style="color:#E8ADAA">
+    {% for i in data %}
+        <img src={{ i }} alt="some_text">
+    {% endfor %}
+</body>
+</html>

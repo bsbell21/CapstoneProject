@@ -2,6 +2,23 @@ import graphlab as gl
 import numpy as np
 
 '''
+
+Notes
+
+1. Take PCA and then KMeans on the User Listen data
+2. Try artist-artist similarity on all the data
+3. artist --> term matrix clustering
+- make each artist a document, do TFIDF on terms
+
+4. create network from all artist data
+5. query echonest for term with weight
+6. graph based
+- could connect artists as vertices with edges as terms
+
+TODO:
+- Get artist from MSD for each song
+- Figure out how to access from the cloud
+
 to CHECK OUT:
 - there's a 
 New plan:
@@ -166,11 +183,11 @@ def import_cat_data():
             time.sleep(10)
         i += 1
 
-    for idx, cat_id in enumerate(df.values):
-        cat = catalog.Catalog(cat_id[0])
-        collection.insert(cat.get_item_dicts())
-        if idx % 115 == 0:
-            time.sleep(60)
+    # for idx, cat_id in enumerate(df.values):
+    #     cat = catalog.Catalog(cat_id[0])
+    #     collection.insert(cat.get_item_dicts())
+    #     if idx % 115 == 0:
+    #         time.sleep(60)
 
 
         # try:
@@ -195,9 +212,9 @@ def run():
 def load_data(filename):
     pass
 
-def current_top_songs(userid, sf, value_col = 'Count', user_id_col='user_id'):
+def current_top_songs(userid, sf, value_col = 'Count'):
     ''' return a users top listened to songs '''
-    return sf[sf[user_id_col] == userid].sort(value_col, ascending = False)
+    return sf[sf['user'] == userid].sort(value_col, ascending = False)
 
 def factor_top_n(song_df, n=10, factor_col = 'factors', item_col = 'artist_song'):
     ''' 

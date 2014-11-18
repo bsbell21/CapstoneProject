@@ -1,11 +1,57 @@
 
 import psycopg2
 import numpy as np
+import pandas as pd
 
 class MSD_Queries:
     def __init__(self):
         self.conn = psycopg2.connect(dbname='msd', user='postgres', host='/tmp')
         self.c = self.conn.cursor()
+
+    def delete_user_stored_data(self, user_id):
+        '''
+        INPUT: user_id
+        OUTPUT: none - deletes users data from stored_listen_data
+        '''
+        self.c.execute(
+                '''
+                DELETE FROM stored_listen_data WHERE "user" = '%s';
+                ''' % (str(user_id))
+            )
+        self.conn.commit()
+
+    def insert_dataframe(self, df, table):
+        # ensuring unique values in index
+        df = df.reset_index().drop('index',axis = 1)
+
+        for i in range(len(df)):
+            # could potentially do this all in one command instead of looping
+            self.c.execute(
+                '''
+                INSERT INTO %s VALUES %s;
+                ''' % (str(table), str(tuple(df.ix[i].values)))
+                )
+            print 'INSERT INTO %s VALUES %s;' % (str(table), str(tuple(df.ix[i].values)))
+
+        self.conn.commit()
+
+    def get_user_stored_data(self,  user_id):
+        '''
+        INPUT: user_id
+        OUTPUT: DataFrame of stored data for user
+        '''
+        user_data = self.gen_query('*', 'stored_listen_data', '"user"', user_id)
+        df = pd.DataFrame(user_data)
+        df.columns = ['user', 'artist_id', 'play_count']
+        return df
+
+    def count_user_stored_data(self, user_id):
+        '''
+        INPUT: user_id
+        OUTPUT: int, count of stored data for user
+        '''
+        return int(self.gen_query('COUNT(*)', 'stored_listen_data', '"user"', user_id)[0][0])
+
 
     def get_song_info(self, song_id):
         '''
