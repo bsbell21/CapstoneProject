@@ -41,7 +41,6 @@ Having a dinner party with your friends but don’t know what to play? weTun.es 
 
 - Once the group list is created, Affinity Propogation is implemented to group artists together with those that are most similar
 - Affinity propogation, as opposed to K-Means, clusters solely based on similarity and therefore will make an appropriate number of clusters dependent upon the level of similarity between the preferences of the group members
-- 
 
 #### Step 6: Playlists for All!
 - Once the clusters are created, the top 5 artists from each cluster are taken as 'playlist seeds'
