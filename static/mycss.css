@@ -1,0 +1,14 @@
+body {
+    background-color:#FFFFFF;
+}
+
+.classname {
+    text-align:center;
+    background:#E8ADAA;
+    width: 10%;
+    float:left;
+}
+
+.classname:hover {
+    background:#E8ADAA;
+}

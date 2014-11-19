@@ -412,7 +412,12 @@ class ArtistClusterAF:
         self.df_lm_allusers = df_lm_allusers.merge(self.artist_name_id_df, on = item_col)
 
 
-        term_docs = self.get_terms(self.artist_ids)
+        term_docs, artists_with_terms_df = self.get_terms(self.artist_ids)
+
+        # removing any artists that don't have terms
+        self.df_lm_allusers = self.df_lm_allusers.merge(artists_with_terms_df, on = 'artist_id')
+        self.df_least_misery = self.df_least_misery.merge(artists_with_terms_df, on = 'artist_id')
+
         feat_mtx = self.vectorize(term_docs)
         df_least_misery_clustered = self.cluster(feat_mtx, self.df_lm_allusers)
         playlist_seed_df, playlist_seeds, playlist_seed_names, playlist_seed_scores = self.get_playlist_seeds(df_least_misery_clustered)
@@ -436,17 +441,23 @@ class ArtistClusterAF:
 
         ''' sql queries don't return in the same order they were sent !!!!'''
         # slower more accurate version
-        # terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'cluster_artist_nontriplets', 
-        #     filter_column = 'artist_id', filter_values = artist_ids)
-        start = time.time()
-        terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'all_artist_terms', 
+        terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'cluster_artist_nontriplets', 
             filter_column = 'artist_id', filter_values = artist_ids)
+        start = time.time()
+        # terms_all = self.m.gen_query(select_columns = 'artist_id, term', table = 'all_artist_terms', 
+        #     filter_column = 'artist_id', filter_values = artist_ids)
         end = time.time()
-        print 'terms queried in: ', start - end
+        print 'terms queried in: ', end - start
 
 
         df_terms = pd.DataFrame(terms_all)
         df_terms.columns = ['artist_id', 'term']
+        self.df_terms = df_terms
+        #getting unique artists left, kinda hacky - change later
+        artists_with_terms_df = df_terms[['artist_id']].groupby('artist_id').sum().reset_index()
+        self.artists_with_terms_df = artists_with_terms_df
+
+
         # just making sure in the same order as df_least_misery
         df_ordering = self.df_least_misery.merge(df_terms, on = 'artist_id')
         df_terms = df_ordering[['artist_id', 'term']]
@@ -460,7 +471,7 @@ class ArtistClusterAF:
         # may have to get unique values here if not all artist ids guaranteed in databse
         # term_docs = df_terms.groupby('artist_id')['term'].agg(' '.join).values
         
-        return term_docs
+        return term_docs, artists_with_terms_df
 
     def vectorize(self, term_docs):
         '''
@@ -480,7 +491,14 @@ class ArtistClusterAF:
 
         # adding cluster labels to least misery dataframe and sorting by rank and cluster
         #df_least_misery_clustered = self.df_least_misery.copy() --> changing to df_lm_allusers
+        print 'number of labels: ', len(self.labels)
+        print 'labels', self.labels
+        
+        # print 'least misery clustered length', len(df_least_misery_clustered)
+        
         df_least_misery_clustered = df_lm_allusers.copy()
+        print 'len df least misery: ', len(df_least_misery_clustered)
+        
         df_least_misery_clustered['cluster'] = self.labels
         df_least_misery_clustered[['cluster', self.score_col]] = df_least_misery_clustered[['cluster', self.score_col]].astype(float)
         ''' will do different sorting if not using rank '''
@@ -488,7 +506,7 @@ class ArtistClusterAF:
         df_least_misery_clustered = df_least_misery_clustered.sort(['cluster', self.score_col], ascending = False)
         self.df_least_misery_clustered = df_least_misery_clustered
         end = time.time()
-        print 'clustering completed in: ', end - start
+        print 'clustering completed in: ', end - start  
         return df_least_misery_clustered
 
     def get_playlist_seeds(self, df_least_misery_clustered, penalize_less_than = 4, penalization = .3):
@@ -515,7 +533,8 @@ class ArtistClusterAF:
         psd_group = psd_group[psd_group.columns - [self.name_col, self.item_col, self.score_col]]
         # setting cluster to index so np.mean will work on all columns but cluster
         psd_group = psd_group.set_index('cluster')
-        psd_group['cluster_score'] = np.mean(psd_group, axis = 1)
+        psd_group['cluster_score'] = np.min(psd_group, axis = 1) # least misery ranking
+        #psd_group['cluster_score'] = np.mean(psd_group, axis = 1) # average happiness ranking
         # resetting index and then grouping 
         psd_group = psd_group.reset_index().groupby('cluster')
         # creating table with count data for each cluster so I can penalize small clusters

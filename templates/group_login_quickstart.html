@@ -1,0 +1,122 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>WeTunes! Group Music Discovery</title>
+
+    <!-- Bootstrap core CSS -->
+    <!-- <link href="../../dist/css/bootstrap.min.css" rel="stylesheet"> -->
+ <!--    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css"> -->
+    <link rel=stylesheet type=text/css href="{{ 'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css' }}">
+    <!-- Custom styles for this template -->
+    <!-- <link href="../static/signin.css" rel="stylesheet"> -->
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='signin.css') }}">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+   
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+  <style>
+
+  body {
+
+    background: url(http://blog.funeralone.com/wp-content/uploads/2014/05/Headphones-Gray-Music.jpg) no-repeat center center fixed; 
+      -webkit-background-size: cover;
+      -moz-background-size: cover;
+      -o-background-size: cover;
+      background-size: cover;
+  }
+  </style>
+  <script>
+    function showLoading() {
+        document.getElementById('loadingmsg').style.display = 'block';
+        document.getElementById('loadingover').style.display = 'block';
+    }
+  </script>
+  </head>
+
+  <body>
+    <div>
+
+    </div>
+    <h1 class="text-primary" style = 'text-align:center'>
+      <strong>
+      Quick Start: Let's get you some playlists!
+      </strong>
+      <br>
+      <small style = 'color:#E8E8EE'>Enter the Spotify IDs of your group below:</small>
+    </h1>
+
+    <div class="container">
+
+      <!-- <form class="form-signin" role="form" action='/playlists' method='POST' id='wform' > -->
+      <form class="form-signin" role="form" action='/playlists' method='POST' id='wform' onsubmit='showLoading();'>
+
+        <label for="user_1" class="sr-only">User 1</label>
+        <input type = 'text' name = 'user_1' id="user_1" class="form-control" placeholder="User 1" autofocus required>
+        <label for="user_2" class="sr-only">User 2</label>
+        <input  id="user_2" type = 'text' name = 'user_2' class="form-control" placeholder="User 2" autofocus>
+        <label for="user_3" class="sr-only">User 3</label>
+        <input  id="user_3" type = 'text' name = 'user_3' class="form-control" placeholder="User 3" autofocus>
+        <label for="user_4" class="sr-only">User 4</label>
+        <input  id="user_4" type = 'text' name = 'user_4' class="form-control" placeholder="User 4" autofocus>
+        <label for="user_5" class="sr-only">User 5</label>
+        <input  id="user_5"  type = 'text' name = 'user_5' class="form-control" placeholder="User 5" autofocus>
+
+
+        <button class="btn btn-lg btn-primary btn-block" type="submit" style = 'margin-top:10px;'>Create Group Session</button>
+      </form>
+
+    </div> 
+
+    </div> <!-- /container -->
+
+    <style type="text/css">
+      #loadingmsg {
+      color: black;
+      background: #fff; 
+      padding: 10px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 100;
+      margin-right: -25%;
+      margin-bottom: -25%;
+      }
+      #loadingover {
+      background: black;
+      z-index: 99;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=80)";
+      filter: alpha(opacity=80);
+      -moz-opacity: 0.8;
+      -khtml-opacity: 0.8;
+      opacity: 0.8;
+    }
+</style>
+
+<div id='loadingmsg' style='display: none;'><img src= "../static/images/loading_icon.gif" alt = 'Loading Gif'></div>
+<div id='loadingover' style='display: none;'></div>
+
+
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <script src="../../assets/js/ie10-viewport-bug-workaround.js"></script>
+  </body>
+</html>

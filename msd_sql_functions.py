@@ -20,6 +20,18 @@ class MSD_Queries:
             )
         self.conn.commit()
 
+    def delete_user_stored_data_private(self, user_id):
+        '''
+        INPUT: user_id
+        OUTPUT: none - deletes users data from stored_listen_data
+        '''
+        self.c.execute(
+                '''
+                DELETE FROM stored_listen_data_private WHERE "user" = '%s';
+                ''' % (str(user_id))
+            )
+        self.conn.commit()
+
     def insert_dataframe(self, df, table):
         # ensuring unique values in index
         df = df.reset_index().drop('index',axis = 1)
@@ -51,6 +63,23 @@ class MSD_Queries:
         OUTPUT: int, count of stored data for user
         '''
         return int(self.gen_query('COUNT(*)', 'stored_listen_data', '"user"', user_id)[0][0])
+
+    def get_user_stored_private_data(self,  user_id):
+        '''
+        INPUT: user_id
+        OUTPUT: DataFrame of stored data for user
+        '''
+        user_data = self.gen_query('*', 'stored_listen_data_private', '"user"', user_id)
+        df = pd.DataFrame(user_data)
+        df.columns = ['user', 'artist_id', 'play_count']
+        return df
+
+    def count_user_stored_private_data(self, user_id):
+        '''
+        INPUT: user_id
+        OUTPUT: int, count of stored data for user
+        '''
+        return int(self.gen_query('COUNT(*)', 'stored_listen_data_private', '"user"', user_id)[0][0])
 
 
     def get_song_info(self, song_id):

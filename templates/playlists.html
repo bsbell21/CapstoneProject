@@ -48,43 +48,49 @@
 
     <!-- Custom styles for this template -->
     <link href="../static/carousel.css" rel="stylesheet">
+
+
 </head>
 <body>
+
 
   <div class="jumbotron" style = "padding:30px 15px">
         <h1>Playlists for all!</h1>
         <p>We've gone ahead and created a series of playlists we think your whole group
         will enjoy. Check them out below!</p>
+        <p><a href="/group_login_quickstart" class="btn btn-primary btn-lg" role="button">Get more playlists!</a></p>
   </div>
 
     <hr class="featurette-divider2">
     {% set cnt = 0 %}
     {% for i in data %}
+
         {% set cnt = cnt + 1%}
 <div class = 'container'>
     <div class = "row">
         <div class = "col-md-7">
             <!-- <h2 class = "featurette-heading">Playlists for All!</h2> -->
             <div style="margin-left: 10%">
-            <h2>Playlist {{cnt}}:</h2>
-            <h2><small>Seeded with: Artist 1, 2 and 3</small></h2>
+            <h2>Playlist {{cnt}}: {{i['playlist_name']}}</h2>
+            <h2><small>Seeded with: {{i['seed_artist_names']}}</small></h2>
 <!--             <p class = 'lead' margin-bottom:100px> 
              Seeded with: Artist 1, 2 and 3
             </p> -->
           </div>
-            <div id='{{i[:-4:-1]}}' style="min-width: 310px; max-width: 600px; height: 300px; margin: 0 auto; horizontal-align:left; "></div>
+            <div id="{{i['playlist_html'][:-4:-1]}}" style="min-width: 310px; max-width: 600px; height: 300px; margin: 0 auto; horizontal-align:left; "></div>
         </div>
         <div class = "col-md-5">
 
-            <iframe src={{i}} width="300" height="380" frameborder="0" allowtransparency="true"></iframe>
+            <iframe src="{{i['playlist_html']}}" width="300" height="380" frameborder="0" allowtransparency="true"></iframe>
         </div>
     </div>
 </div>
 <hr class="featurette-divider2">
 
 <script>
+
     $(function () {
-    $('{{"#" + i[:-4:-1]}}').highcharts({
+    $('{{"#" + i["playlist_html"][:-4:-1]}}').highcharts({
         chart: {
             type: 'bar'
         },
@@ -93,7 +99,8 @@
         },
 
         xAxis: {
-            categories: ['User 1', 'User 2', 'User 3'],
+
+            categories: {{i['user_ids'] | safe}},
             title: {
                 text: null
             }
@@ -121,7 +128,7 @@
         },
         series: [{
             name: 'Preference Score',
-            data: [.2,.5,.7]
+            data: {{i['user_scores']}}
         }],
         legend: {
             enabled: false,

@@ -1,8 +1,25 @@
 <!doctype html>
 <html>
   <head>
-    <title>Example of the Authorization Code flow with Spotify</title>
+    <title>WeTunes! Group Music Discovery</title>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <!-- Bootstrap core CSS -->
+    <!-- <link href="../../dist/css/bootstrap.min.css" rel="stylesheet"> -->
+ <!--    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css"> -->
+    <link rel=stylesheet type=text/css href="{{ 'https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css' }}">
+    <!-- Custom styles for this template -->
+    <!-- <link href="../static/signin.css" rel="stylesheet"> -->
+    <link rel=stylesheet type=text/css href="{{ url_for('../../static', filename='signin.css') }}">
+
+    <!-- Just for debugging purposes. Don't actually copy these 2 lines! -->
+    <!--[if lt IE 9]><script src="../../assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+   
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
     <style type="text/css">
       #login, #loggedin {
         display: none;
@@ -14,13 +31,47 @@
         width: 500px;
       }
     </style>
+
+  <style>
+
+  body {
+
+    background: url(http://blog.funeralone.com/wp-content/uploads/2014/05/Headphones-Gray-Music.jpg) no-repeat center center fixed; 
+      -webkit-background-size: cover;
+      -moz-background-size: cover;
+      -o-background-size: cover;
+      background-size: cover;
+  }
+
+  body {
+    padding-top: 100px;
+    padding-bottom: 40px;
+
+  }
+
+  div #login {
+    max-width: 330px;
+    padding: 15px;
+    margin: 0 auto;
+
+  }
+
+  </style>
   </head>
 
   <body>
+<!--     <div style = 'height: 100px'></div> -->
+    <h1 class="text-primary" style = 'text-align:center'>
+      <strong>
+      Welcome to weTunes!
+      </strong>
+      <br>
+      <small style = 'color:#E8E8EE'>Please login with Spotify below:</small>
+    </h1>
     <div class="container">
       <div id="login">
-        <h1>This is an example of the Authorization Code flow</h1>
-        <a href="/login" class="btn btn-primary">Log in with Spotify</a>
+        <!-- <a href="/login" style = 'text-align:center' class="btn btn-primary">Log in</a> -->
+        <a href="/login" style = 'text-align:center;' class="btn btn-lg btn-primary btn-block">Log in</a>
       </div>
       <div id="loggedin">
         <div id="user-profile">
@@ -29,6 +80,12 @@
         </div>
         <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
       </div>
+    </div>
+
+    <div style = 'text-align:center; vertical-align:bottom'>
+      <p><a href = 'http://localhost:7000/group_login_quickstart'>Click Here for Quick Start</a>
+<!--         <p class="text-warning"><strong><em>(P.S. if you login - the recommendations will be better! <br> Your first login may take a minute or two, but after that it's easy peasy)</em></strong></p> -->
+
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">

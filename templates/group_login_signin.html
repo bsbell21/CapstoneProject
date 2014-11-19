@@ -40,13 +40,18 @@
       background-size: cover;
   }
   </style>
+  <script>
+    function showLoading() {
+        document.getElementById('loadingmsg').style.display = 'block';
+        document.getElementById('loadingover').style.display = 'block';
+    }
+  </script>
   </head>
 
   <body>
-
     <h1 class="text-primary" style = 'text-align:center'>
       <strong>
-      Welcome to weTunes!
+      Thanks for signing in!
       </strong>
       <br>
       <small style = 'color:#E8E8EE'>Enter the Spotify IDs of your group below:</small>
@@ -54,7 +59,7 @@
 
     <div class="container">
 
-      <form class="form-signin" role="form" action='/playlists_new' method='POST' id='wform'>
+      <form class="form-signin" role="form" action='/playlists' method='POST' id='wform' onsubmit='showLoading();'>
         <!-- passing in tokens - this is the difference from quickstart login -->
         <input type = 'hidden' name = 'access_token' value = {{data[0]}}></input>
         <input type = 'hidden' name = 'refresh_token' value = {{data[1]}}></input>
@@ -78,6 +83,37 @@
     </div> 
 
     </div> <!-- /container -->
+
+  <style type="text/css">
+      #loadingmsg {
+      color: black;
+      background: #fff; 
+      padding: 10px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: 100;
+      margin-right: -25%;
+      margin-bottom: -25%;
+      }
+      #loadingover {
+      background: black;
+      z-index: 99;
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+      -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=80)";
+      filter: alpha(opacity=80);
+      -moz-opacity: 0.8;
+      -khtml-opacity: 0.8;
+      opacity: 0.8;
+    }
+  </style>
+
+  <div id='loadingmsg' style='display: none;'><img src= "../static/images/loading_icon.gif" alt = 'Loading Gif'></div>
+  <div id='loadingover' style='display: none;'></div>
 
 
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
