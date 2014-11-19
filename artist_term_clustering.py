@@ -31,7 +31,8 @@ class ArtistClusterAF:
         term_docs = self.get_terms(self.artist_ids)
         feat_mtx = self.vectorize(term_docs)
         df_least_misery_clustered = ac.cluster(feat_mtx)
-        playlist_seed_df, playlists_seeds = ac.get_playlist_seeds(df_least_misery_clustered)
+        self.playlist_seed_df, playlists_seeds = ac.get_playlist_seeds(df_least_misery_clustered)
+
 
         pass
 

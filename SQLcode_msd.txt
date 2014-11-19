@@ -18,7 +18,16 @@ GROUP BY user
 SELECT AVG(song_count)
 FROM user_level
 
-CREATE TABLE listen_data_init (
+CREATE TABLE catalog_data_init (
+    "catalog" varchar(250), 
+    "artist_name" varchar(250), 
+    "artist_id" varchar(250),
+    "song" varchar(250),
+    "song_id" varchar(250),
+    "play_count" int
+    );
+
+CREATE TABLE catalog_data (
     "catalog" varchar(250), 
     "artist_name" varchar(250), 
     "artist_id" varchar(250),
